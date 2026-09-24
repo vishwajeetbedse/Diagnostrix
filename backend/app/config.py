@@ -7,17 +7,46 @@
     OPENFDA_API_KEY  optional; raises the openFDA limit from 1,000 to 120,000 requests/day
     DX_LLM           hf (default) | stub | off
     DX_MODEL         Hugging Face model id (default Qwen/Qwen2.5-1.5B-Instruct)
+    DX_DTYPE         model precision: auto (default) | float32 | bfloat16 | float16
     DX_DATA_DIR      where the cache, DDInter, audit and patient databases live (default backend/data)
     PORT             HTTP port (default 8000)
+
+Values can also come from a `.env` file in the project folder (see .env.example).
+Variables already set in the environment take precedence over `.env`.
 """
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BACKEND_DIR.parent
+
+
+def load_dotenv(path: Path) -> None:
+    """Load KEY=value lines into os.environ without overriding variables already set.
+
+    Done here rather than in the start scripts so every way of launching the
+    app (start.sh, start-windows.bat, `python -m backend.app.main`, tools)
+    sees the same settings. Blank values are skipped, so `OPENFDA_API_KEY=`
+    means "not set". Kept dependency-free on purpose: no python-dotenv.
+    """
+    if not path.is_file():
+        return
+    for raw in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (part.strip() for part in line.split("=", 1))
+        value = value.strip('"').strip("'")
+        if key and value:
+            os.environ.setdefault(key, value)
+
+
+if "pytest" not in sys.modules:  # tests stay hermetic: a developer's .env must not leak into them
+    load_dotenv(PROJECT_DIR / ".env")
 
 
 @dataclass(frozen=True)

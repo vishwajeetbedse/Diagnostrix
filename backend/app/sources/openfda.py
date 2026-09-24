@@ -18,6 +18,9 @@ SOURCE_LABEL = "openFDA · drug labels"
 SOURCE_FAERS = "openFDA · FAERS"
 
 REACTION = "patient.reaction.reactionmeddrapt.exact"
+# Largest `limit` openFDA accepts without an API key (measured 2026-09: 999 → 200, 1000 → 403).
+# Only the tail of a 1,000-row reaction/year list is lost; set OPENFDA_API_KEY to get all of it.
+KEYLESS_MAX_LIMIT = 999
 LABEL_SECTIONS = [
     ("boxed_warning", "Boxed warning"),
     ("contraindications", "Contraindications"),
@@ -49,6 +52,9 @@ class OpenFDA:
     def _params(self, **p) -> dict:
         if self.key:
             p["api_key"] = self.key
+        elif p.get("limit", 0) > KEYLESS_MAX_LIMIT:
+            # openFDA answers 403 API_KEY_MISSING for keyless requests above this limit.
+            p["limit"] = KEYLESS_MAX_LIMIT
         return p
 
     # ------------------------------------------------------------ labels

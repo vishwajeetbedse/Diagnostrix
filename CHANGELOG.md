@@ -11,13 +11,16 @@ Finishing pass: patient records, multi-drug orders, interface redesign, project 
 - **Orders of up to 15 medications** (previously 2). Interaction rules (DDI-KB-01, DDI-GLB-01, DDI-GLB-02) now run on every pair of lines. DUP-01 groups repeated ingredients into one finding that names every line. Findings name both drugs involved.
 - "Polypharmacy, four agents" sample case.
 - `LICENSE` (Apache 2.0), `DATA-LICENSE.md`, `CONTRIBUTING.md`, this changelog, `.env.example`, and `docs/` screenshots.
-- `start.sh` and `start-windows.bat` load an optional `.env` file.
+- Optional `.env` file in the project folder, read by `backend/app/config.py` on startup.
 - GitHub Actions CI: backend tests (Python 3.12) and frontend typecheck and build (Node 22) on every push and pull request.
 
 ### Changed
 - Interface redesigned for dense, clinical-style reading: order lines are table rows, not cards; flat panels with square corners; a smaller type scale; colour used only for severity and status; restyled selects, checkboxes and number fields; plain page titles.
 - The API rejects orders with duplicate line numbers (422).
-- The README was rewritten; test count updated (38).
+- The README was rewritten; test count updated (40).
+
+### Fixed
+- FAERS panels and the Signal lab failed with `403 Forbidden` when no openFDA API key was set: openFDA refuses keyless requests with `limit` above 999, and the app asked for 1,000. Keyless requests are now capped at 999.
 
 ### Removed
 - The dose-meter chart, replaced by an inline percentage-of-maximum bar on each order line.

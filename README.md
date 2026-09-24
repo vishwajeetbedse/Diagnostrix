@@ -172,7 +172,7 @@ Open **<http://localhost:8000>**. API documentation is at <http://localhost:8000
 
 ## Configuration
 
-All settings are optional environment variables. Copy [`.env.example`](.env.example) to `.env` and edit it; `start.sh` and `start-windows.bat` load `.env` automatically.
+All settings are optional environment variables. Copy [`.env.example`](.env.example) to `.env` and edit it. The app reads `.env` from the project folder on startup, however it is started; variables already set in your shell take precedence. `.env` is git-ignored, so keys stay out of the repository. Never put a real key in `.env.example`, which is committed.
 
 | Variable | Values | Effect |
 |---|---|---|
@@ -187,7 +187,7 @@ All settings are optional environment variables. Copy [`.env.example`](.env.exam
 ## Tests
 
 ```bash
-python -m pytest backend/tests -q      # 38 tests
+python -m pytest backend/tests -q      # 40 tests
 cd frontend && npm run typecheck
 ```
 

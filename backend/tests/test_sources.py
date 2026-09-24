@@ -106,3 +106,27 @@ def test_circuit_breaker_serves_cache_after_repeated_failures(tmp_path):
             pass
     assert calls["n"] == 3  # after 3 failures the breaker stops hitting the network
     assert f.health["src"].circuit_open
+
+
+def test_keyless_openfda_limit_is_capped():
+    # openFDA returns 403 API_KEY_MISSING for keyless requests with limit > 999.
+    from backend.app.sources.openfda import KEYLESS_MAX_LIMIT, OpenFDA
+    assert OpenFDA(None, None)._params(count="x", limit=1000)["limit"] == KEYLESS_MAX_LIMIT
+    assert OpenFDA(None, None)._params(limit=20)["limit"] == 20
+    keyed = OpenFDA(None, "k")._params(limit=1000)
+    assert keyed["limit"] == 1000 and keyed["api_key"] == "k"
+
+
+def test_load_dotenv_does_not_override_and_skips_blanks(tmp_path, monkeypatch):
+    from backend.app.config import load_dotenv
+    env = tmp_path / ".env"
+    env.write_text('# comment\nDX_T_A=from-file\nDX_T_B="quoted"\nDX_T_EMPTY=\nDX_T_SET=from-file\nnot a setting\n', encoding="utf-8")
+    for k in ("DX_T_A", "DX_T_B", "DX_T_EMPTY"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("DX_T_SET", "from-shell")
+    load_dotenv(env)
+    import os
+    assert os.environ["DX_T_A"] == "from-file" and os.environ["DX_T_B"] == "quoted"
+    assert "DX_T_EMPTY" not in os.environ and os.environ["DX_T_SET"] == "from-shell"
+    for k in ("DX_T_A", "DX_T_B"):
+        monkeypatch.delenv(k)
