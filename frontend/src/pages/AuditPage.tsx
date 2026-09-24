@@ -12,6 +12,7 @@ const EVENT: Record<string, { label: string; tone: string }> = {
   'dose-change': { label: 'Dose changed', tone: '' },
   sign: { label: 'Signed', tone: 'ok' },
   'ai-rationale': { label: 'AI rationale', tone: '' },
+  'ai-rejected': { label: 'AI rejected', tone: 'warn' },
   'list-screen': { label: 'List screen', tone: '' },
 };
 
@@ -28,6 +29,7 @@ function detail(e: AuditEntry): string {
     case 'sign': return `${(p.orders ?? []).join('; ')}${p.overrides?.length ? ` · ${p.overrides.length} override(s)` : ''}`;
     case 'dose-change': return `${p.rule}: line ${p.line} → ${p.to} mg`;
     case 'ai-rationale': return `${p.rule} · ${p.model} · ${(p.ms / 1000).toFixed(1)} s`;
+    case 'ai-rejected': return `${p.rule}: ${p.reason}${p.simulated ? ' (training simulation)' : ''}`;
     case 'list-screen': return `${(p.entries ?? []).join(', ')} · ${p.findings} finding(s)`;
     case 'acknowledge': return String(p.rule);
     default: return JSON.stringify(p);

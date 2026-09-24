@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type {
-  AuditEntry, ChainCheck, DrugProfile, Faers, Formulary, Health, OrderInput, PairEvidence, Patient, PatientInput, PatientRecord,
+  AuditEntry, ChainCheck, DrugProfile, ExplainResult, GroundingCheck, Faers, Formulary, Health, OrderInput, PairEvidence, Patient, PatientInput, PatientRecord,
   ScreenResult, SearchHit, Signal, VerifyResult, Resolution,
 } from './types';
 
@@ -59,8 +59,9 @@ export const api = {
   auditAppend: (event: string, ref: string, payload: Record<string, unknown>) => post<AuditEntry>('/audit', { event, ref, payload }),
   auditVerify: () => request<ChainCheck>('/audit/verify'),
   auditTamper: () => post<{ ok: boolean; seq?: number }>('/audit/tamper-demo', {}),
-  explain: (facts: Record<string, unknown>) =>
-    post<{ accepted: boolean; text?: string; reason?: string; model: string; latencyMs: number }>('/ai/explain', { facts }, 180000),
+  explain: (facts: Record<string, unknown>) => post<ExplainResult>('/ai/explain', { facts }, 180000),
+  groundingCheck: (facts: Record<string, unknown>, output: string, inject = false) =>
+    post<GroundingCheck>('/ai/grounding-check', { facts, output, inject }),
   aiScreen: (body: Record<string, unknown>) => post<{ lines: string[]; model: string; latencyMs: number }>('/ai/screen', body, 240000),
 };
 

@@ -22,7 +22,7 @@ export default function SignalsPage() {
       <div className="page-head">
         <div>
           <h1>FAERS signal analysis</h1>
-          <p>Reporting odds ratio per reaction: drug pair and each drug alone versus all other FAERS reports.</p>
+          <p>Statistical signal detection (disproportionality analysis): a reporting odds ratio with 95% confidence interval for each reaction, comparing the drug pair and each drug alone against all other FAERS reports.</p>
         </div>
       </div>
 
@@ -47,7 +47,7 @@ export default function SignalsPage() {
       ) : <div className="empty">Select two drugs.</div>}
 
       <section className="panel">
-        <header className="panel__head"><h2 className="panel__title">Method</h2></header>
+        <header className="panel__head"><h2 className="panel__title">Method — statistical signal detection</h2><span className="panel__meta">Computed in backend/app/sources/openfda.py · ror()</span></header>
         <div className="panel__body method">
           <table className="twobytwo mono" aria-label="Two-by-two contingency table">
             <thead><tr><th /><th>Reaction R</th><th>Other reactions</th></tr></thead>
@@ -57,7 +57,7 @@ export default function SignalsPage() {
             </tbody>
           </table>
           <div className="stack">
-            <p><strong>Reporting odds ratio</strong> ROR = (a / b) ÷ (c / d), with a 95% confidence interval of exp(ln ROR ± 1.96 √(1/a + 1/b + 1/c + 1/d)).</p>
+            <p><strong>Reporting odds ratio</strong> ROR = (a / b) ÷ (c / d), with a 95% confidence interval of exp(ln ROR ± 1.96 √(1/a + 1/b + 1/c + 1/d)) — the log (Woolf) method: a normal approximation on the log scale.</p>
             <p>A <strong>signal</strong> is flagged when at least 3 reports exist and the lower bound of the interval is above 1. Comparing the pair against each drug alone shows whether the combination adds risk beyond either agent.</p>
             <p className="muted">FAERS is a spontaneous reporting system: counts reflect what was reported, not how often reactions occur, and a signal is a hypothesis for review — not proof of causation.</p>
             <GlobalNote />

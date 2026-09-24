@@ -114,3 +114,22 @@ def test_verify_many_order_lines(client):
     assert client.post("/api/v1/verify", json={"patient": {}, "orders": too_many}).status_code == 422
     dup_lines = [{"line": 1, "name": "a"}, {"line": 1, "name": "b"}]
     assert client.post("/api/v1/verify", json={"patient": {}, "orders": dup_lines}).status_code == 422
+
+
+def test_grounding_check_endpoint_and_explain_report(client):
+    facts = {"headline": "Dose exceeds limit", "finding": "3,000 mg/day ordered · ceiling 1,500 mg/day · 200%",
+             "rationale": "The regimen delivers 3,000 mg/day against a 1,500 mg/day ceiling."}
+    good = client.post("/api/v1/ai/grounding-check", json={"facts": facts, "output": facts["rationale"]}).json()
+    assert good["accepted"] and good["injected"] is None
+    bad = client.post("/api/v1/ai/grounding-check", json={"facts": facts, "output": facts["rationale"], "inject": True}).json()
+    assert not bad["accepted"] and bad["injected"]["to"].replace(",", "") in bad["grounding"]["ungrounded"]
+    assert client.post("/api/v1/ai/grounding-check", json={"facts": {}, "output": "x"}).status_code == 400
+    import time
+    for _ in range(20):
+        r = client.post("/api/v1/ai/explain", json={"facts": facts})
+        if r.status_code != 503:
+            break
+        time.sleep(0.1)
+    body = r.json()
+    assert body["accepted"] and body["grounding"]["passed"] and body["raw"] and "KNOWLEDGE BASE RATIONALE" in body["prompt"]
+    assert client.post("/api/v1/audit", json={"event": "ai-rejected", "ref": "VR-X", "payload": {"simulated": True}}).status_code == 200

@@ -12,12 +12,15 @@ Finishing pass: patient records, multi-drug orders, interface redesign, project 
 - "Polypharmacy, four agents" sample case.
 - `LICENSE` (Apache 2.0), `DATA-LICENSE.md`, `CONTRIBUTING.md`, this changelog, `.env.example`, and `docs/` screenshots.
 - Optional `.env` file in the project folder, read by `backend/app/config.py` on startup.
+- **AI transparency.** Rationale text carries a provenance tag ("AI-generated · model · latency" or "Knowledge-base text" with the reason). A "Show AI safety check" panel shows the facts given to the model, its raw output and a per-figure grounding verdict. A live indicator with elapsed time shows while the local model runs (Order verification, Interaction screen). The System page has an "AI and data pipeline" summary and a "Grounding check — try it" demo. The Signal lab names its method (ROR, 95% CI, log/Woolf).
+- `POST /api/v1/ai/grounding-check`: runs the same accept/reject decision as `/ai/explain` on any text; `inject: true` first alters one figure (training demo). `/ai/explain` now also returns the prompt, raw output and grounding report.
+- Audit event `ai-rejected`, written when AI output fails the grounding check (flagged when simulated).
 - GitHub Actions CI: backend tests (Python 3.12) and frontend typecheck and build (Node 22) on every push and pull request.
 
 ### Changed
 - Interface redesigned for dense, clinical-style reading: order lines are table rows, not cards; flat panels with square corners; a smaller type scale; colour used only for severity and status; restyled selects, checkboxes and number fields; plain page titles.
 - The API rejects orders with duplicate line numbers (422).
-- The README was rewritten; test count updated (40).
+- The README was rewritten; test count updated (42).
 
 ### Fixed
 - FAERS panels and the Signal lab failed with `403 Forbidden` when no openFDA API key was set: openFDA refuses keyless requests with `limit` above 999, and the app asked for 1,000. Keyless requests are now capped at 999.

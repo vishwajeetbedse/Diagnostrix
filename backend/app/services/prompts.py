@@ -84,6 +84,74 @@ def ungrounded_numbers(output: str, source: str) -> list[str]:
     return sorted(numbers(output) - numbers(source), key=lambda s: float(s) if s.replace(".", "", 1).isdigit() else 0)
 
 
+def grounding_report(output: str, source: str) -> dict:
+    """Every figure in the output, in order of appearance, marked grounded or not.
+
+    Returned to the UI so the clinician can see exactly which numbers were
+    checked and which one (if any) caused a rejection.
+    """
+    known = numbers(source)
+    seen: list[str] = []
+    for m in _NUM.findall(output or ""):
+        v = _norm(m)
+        if v and v not in seen:
+            seen.append(v)
+    rows = [{"value": v, "grounded": v in known} for v in seen]
+    return {"figures": rows, "ungrounded": [r["value"] for r in rows if not r["grounded"]],
+            "passed": all(r["grounded"] for r in rows), "factFigures": len(known)}
+
+
+def judge(raw: str, source: str) -> dict:
+    """The single accept/reject decision for model output (used by /ai/explain and /ai/grounding-check).
+
+    Rejects text that is too short to be a rationale, or that contains any
+    figure absent from the verified facts. Rejected text is never shown as the
+    rationale; the UI falls back to the knowledge-base text.
+    """
+    text = clean_prose(raw)
+    report = grounding_report(text, source)
+    if len(text) < 40:
+        return {"accepted": False, "reason": "Model returned no usable text.", "candidate": text, "grounding": report}
+    if report["ungrounded"]:
+        return {"accepted": False, "reason": f"It contained figures not in the verified facts ({', '.join(report['ungrounded'])}).",
+                "candidate": text, "grounding": report}
+    return {"accepted": True, "candidate": text, "grounding": report}
+
+
+def inject_fabricated_figure(text: str, source: str) -> dict:
+    """Training demo: alter one figure so it no longer matches the facts.
+
+    Replaces the largest figure in the text (usually a dose or daily total, the
+    most dangerous thing to get wrong) with a multiple of it that appears
+    nowhere in the facts or the text, or appends a dosing sentence if the text
+    has no numbers. The altered text then goes through judge() unchanged, so
+    the rejection shown is the real check, not a canned result.
+    """
+    known = numbers(source) | numbers(text)
+    def size(match) -> float:
+        try:
+            return float(_norm(match.group().rstrip(",")))
+        except ValueError:
+            return 0.0
+
+    m = max(_NUM.finditer(text or ""), key=size, default=None)
+    if m:
+        token = m.group().rstrip(",")  # "3,000, which…" — keep the sentence's own comma
+        try:
+            base = float(_norm(token))
+        except ValueError:
+            base = 1.0
+        for factor in (3, 7, 11, 13, 17):
+            value = base * factor if base else factor
+            if _norm(f"{value:g}") not in known:
+                break
+        new = f"{int(value):,}" if float(value).is_integer() else f"{value:g}"
+        end = m.start() + len(token)
+        return {"text": text[:m.start()] + new + text[end:], "from": token, "to": new}
+    value = next(v for v in range(37, 10_000, 4) if str(v) not in known)
+    return {"text": f"{text.rstrip()} Reduce the dose to {value} mg.", "from": None, "to": str(value)}
+
+
 def clean_prose(text: str, max_chars: int = 1400) -> str:
     text = re.sub(r"[*#`]+", "", text)  # strip markdown the UI would show literally
     text = re.sub(r"\s+", " ", text).strip()

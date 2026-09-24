@@ -94,6 +94,11 @@ export function SignalView({ a, b, data, compactView }: { a: string; b: string; 
         <div><span className="mono">{compact(t.b)}</span><span>with {b}</span></div>
         <div><span className="mono">{compact(t.all)}</span><span>total in FAERS</span></div>
       </div>
+      <div className="method-tag">
+        <strong>Statistical signal detection</strong>
+        <span>Reporting odds ratio (ROR) · 95% CI, log method (Woolf) · signal = ≥ 3 reports and lower CI &gt; 1</span>
+        <small>For each reaction, estimates whether it is reported with these drugs more often than across all {compact(t.all)} FAERS reports. A statistical estimate from report counts, not a lookup.</small>
+      </div>
       {!rows.length ? <p className="ev-none">Too few co-reports to estimate a signal.</p> : (
         <>
           <div className="row signal__head">

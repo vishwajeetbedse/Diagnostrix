@@ -123,9 +123,6 @@ code { font-family: var(--mono); font-size: .92em; background: var(--surface-3);
 .rationale { display: grid; gap: 4px; }
 .rationale__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .rationale p { font-size: var(--fs-md); line-height: 1.55; max-width: 110ch; }
-.src { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
-.src svg { width: 12px; height: 12px; }
-.src--ai { color: var(--ink-2); }
 .ai-note { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--ink-3); }
 .ai-note .spinner { width: 10px; height: 10px; }
 .ai-note--warn { color: var(--warn); }
@@ -384,3 +381,51 @@ code { font-family: var(--mono); font-size: .92em; background: var(--surface-3);
   .modal__list li { grid-template-columns: 1fr; }
   .lookup { grid-template-columns: 1fr; }
 }
+
+/* ============================================================ AI layer */
+/* provenance tag: which path produced the text on screen */
+.ai-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid var(--line-2); border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.ai-tag--ai { border-color: var(--ink-3); background: var(--surface); color: var(--ink); box-shadow: inset 3px 0 0 var(--ink-2); padding-left: 8px; }
+.ai-tag__note { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink-3); }
+.ai-pending { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--ink-2); }
+.ai-pending .spinner { width: 11px; height: 11px; }
+.ai-demo { font-size: var(--fs-xs); margin-top: 2px; }
+
+/* safety check disclosure */
+.ai-check { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); font-size: var(--fs-sm); }
+.ai-check > summary { cursor: pointer; padding: 4px 8px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.ai-check > summary:hover { background: var(--surface-2); }
+.ai-check[open] > summary { border-bottom: 1px solid var(--line); }
+.ai-check__body { padding: 8px; display: grid; gap: 8px; }
+.ai-check__note { color: var(--ink-2); }
+.ai-check__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.ai-check__cols h4 { margin-bottom: 3px; }
+.ai-check__pre { margin: 0; padding: 6px 8px; max-height: 180px; overflow: auto; white-space: pre-wrap; font: 11.5px/1.45 var(--mono); background: var(--surface-2); border: 1px solid var(--line); }
+.ai-check__out { padding: 6px 8px; border: 1px solid var(--line); background: var(--surface-2); line-height: 1.55; }
+.fig { padding: 0 2px; font-family: var(--mono); font-weight: 700; background: none; }
+.fig--ok { color: var(--ok); box-shadow: inset 0 -1px 0 var(--ok-line); }
+.fig--bad { color: var(--crit); background: var(--crit-weak); box-shadow: inset 0 -2px 0 var(--crit); }
+.grounding { display: grid; gap: 6px; font-size: var(--fs-sm); }
+.gbadge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.gbadge--sm { height: 16px; font-size: 10px; padding: 0 4px; }
+.gbadge--pass { background: var(--ok-weak); color: var(--ok); border: 1px solid var(--ok-line); }
+.gbadge--fail { background: var(--crit-weak); color: var(--crit); border: 1px solid var(--crit-line); }
+.figs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.fchip { font: 600 11px var(--mono); padding: 1px 5px; border-radius: var(--r-sm); border: 1px solid var(--line-2); }
+.fchip--ok { color: var(--ok); border-color: var(--ok-line); }
+.fchip--bad { color: var(--crit); border-color: var(--crit); background: var(--crit-weak); }
+
+/* statistical method label beside the FAERS chart */
+.method-tag { display: grid; gap: 1px; padding: 5px 8px; border-left: 3px solid var(--ink-2); background: var(--surface-2); font-size: var(--fs-sm); }
+.method-tag strong { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
+.method-tag span { font-family: var(--mono); font-size: 11.5px; }
+.method-tag small { color: var(--ink-3); font-size: var(--fs-xs); }
+
+/* System page: AI and data pipeline */
+.pipeline td { vertical-align: top; }
+.pipeline td:first-child { width: 22%; }
+.pipeline td:nth-child(3) { width: 28%; }
+.pipeline .mono { font-size: 10.5px; }
+.pipeline .yes { font-weight: 700; color: var(--ok); }
+.pipeline .no { font-weight: 700; color: var(--crit); }
+@media (max-width: 760px) { .ai-check__cols { grid-template-columns: minmax(0, 1fr); } }

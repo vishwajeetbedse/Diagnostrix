@@ -130,3 +130,17 @@ def test_load_dotenv_does_not_override_and_skips_blanks(tmp_path, monkeypatch):
     assert "DX_T_EMPTY" not in os.environ and os.environ["DX_T_SET"] == "from-shell"
     for k in ("DX_T_A", "DX_T_B"):
         monkeypatch.delenv(k)
+
+
+def test_judge_and_injected_figure_is_rejected():
+    from backend.app.services import prompts
+    facts = "Dose exceeds limit\n3,000 mg/day ordered · ceiling 1,500 mg/day · 200% of limit"
+    ok = prompts.judge("The regimen delivers 3,000 mg/day, which is 200% of the 1,500 mg/day ceiling.", facts)
+    assert ok["accepted"] and ok["grounding"]["passed"] and [f["value"] for f in ok["grounding"]["figures"]] == ["3000", "200", "1500"]
+    bad = prompts.judge("The regimen delivers 3,000 mg/day; reduce to 400 mg every 4 h.", facts)
+    assert not bad["accepted"] and bad["grounding"]["ungrounded"] == ["400", "4"]
+    inj = prompts.inject_fabricated_figure("It delivers 3,000, which exceeds the 1,500 mg/day ceiling.", facts)
+    assert inj["from"] == "3,000" and inj["to"] == "9,000" and inj["text"].startswith("It delivers 9,000, which")
+    assert not prompts.judge(inj["text"], facts)["accepted"]
+    no_num = prompts.inject_fabricated_figure("Hepatotoxicity risk is increased in this patient.", facts)
+    assert no_num["from"] is None and not prompts.judge(no_num["text"], facts)["accepted"]

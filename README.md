@@ -15,7 +15,7 @@ Diagnostix checks medication orders for errors before they reach a patient. A ph
 
 - [Features](#features) · [Screenshots](#screenshots) · [Data sources](#data-sources) · [Architecture](#architecture)
 - [Setup](#setup) · [Run](#run) · [Configuration](#configuration) · [Tests](#tests)
-- [Demo script](#demo-script-about-4-minutes) · [How the signal is calculated](#how-the-signal-is-calculated)
+- [Demo script](#demo-script-about-5-minutes) · [How the signal is calculated](#how-the-signal-is-calculated)
 - [Contributing](#contributing) · [License](#license)
 
 ## Features
@@ -78,7 +78,7 @@ React + TypeScript (Vite)  ──►  FastAPI /api/v1 (OpenAPI docs at /docs)
 - **Only the decision layer can raise or clear an alert.** It is local and deterministic, runs in a few milliseconds and works offline.
 - **Interactions are checked across every pair of order lines**, not just the first two. A drug repeated on several lines produces one duplication alert naming all of them.
 - **Evidence shows where it came from:** the source name, whether it is live or cached, and how old it is.
-- **The AI only rewrites the explanation paragraph.** If its text contains a number that is not in the verified facts, the text is discarded and the knowledge-base text is shown.
+- **The AI only rewrites the explanation paragraph.** If its text contains a number that is not in the verified facts, the text is discarded and the knowledge-base text is shown. The UI labels which of the two produced the text on screen, and "Show AI safety check" displays the facts the model was given, its output and the per-figure verdict. `POST /api/v1/ai/grounding-check` runs the same check on any text, which the System page uses for a live demonstration.
 - **The app keeps working when a source fails.** After 3 consecutive failures it stops calling that source for 60 seconds and answers from the cache.
 
 **Rules** (defined in `backend/app/core/engine.py`)
@@ -187,13 +187,13 @@ All settings are optional environment variables. Copy [`.env.example`](.env.exam
 ## Tests
 
 ```bash
-python -m pytest backend/tests -q      # 40 tests
+python -m pytest backend/tests -q      # 42 tests
 cd frontend && npm run typecheck
 ```
 
 The tests cover the rules engine (including multi-drug orders), patient records, name resolution, DDInter lookup, ROR maths, caching, the circuit breaker, the audit chain and the API. They use synthetic fixtures, so they need no network access and no model download.
 
-## Demo script (about 4 minutes)
+## Demo script (about 5 minutes)
 
 Sample cases are loaded from the **Sample case** menu in the patient header on the Order verification screen.
 
@@ -204,6 +204,7 @@ Sample cases are loaded from the **Sample case** menu in the patient header on t
 5. **Drugs outside the curated list.** Simvastatin + clarithromycin is caught through DDInter, with a note that simvastatin's dose could not be checked against curated limits.
 6. **Interaction screen.** `Dolo 650, Combiflam, Warf 5, Aspirin, Pan 40` shows paracetamol duplicated across two brands and the warfarin bleeding interactions.
 7. **Audit ledger.** Click **Verify chain**, then **Simulate tampering**, then **Verify chain** again; it names the entry that was edited.
+8. **AI safety boundary.** On any finding's **Rationale** tab, the tag says whether the paragraph is *AI-generated* (with model and latency) or *Knowledge-base text* (with the reason). Open **Show AI safety check** to see the facts, the output and every figure checked. Click **Simulate hallucinated figure**: the largest figure is changed, the real server-side check rejects it, and the knowledge-base text returns. **Undo simulation** restores the previous state. This works even with the AI off. For a standalone version, open **System → Grounding check — try it**, choose *Invented dose* (fails) or *Faithful rewording* (passes), or click **Inject a fabricated figure**.
 
 ## How the signal is calculated
 

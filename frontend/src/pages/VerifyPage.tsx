@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { ChevronRight, Lock, Plus, X } from 'lucide-react';
 import { api, useFormulary, useHealth } from '../api/client';
 import { MAX_ORDER_LINES } from '../api/types';
+import type { GroundingCheck, GroundingReport } from '../api/types';
 import type { Finding, OrderInput, OrderLineResult, Patient, PatientInput, PatientRecord, VerifyResult } from '../api/types';
 import { ageText, fmt } from '../lib/format';
 import { SCENARIOS } from '../lib/scenarios';
@@ -11,11 +12,20 @@ import DrugInput from '../components/DrugInput';
 import PatientForm from '../components/PatientForm';
 import PatientPicker from '../components/PatientPicker';
 import { DrugReactions, PairEvidence, SignalView } from '../components/Evidence';
+import { AiPending, AiTag, SafetyCheck, shortModel } from '../components/Ai';
 import { ErrorNote, Loading, Sev, Tabs, useDebounced } from '../components/ui';
 import LabelSections from '../components/LabelSections';
 
 type Override = { reason: string; note: string };
-type AiState = { status: 'pending' | 'done' | 'rejected' | 'error'; text?: string; reason?: string; model?: string; ms?: number };
+/**
+ * What the AI layer produced for one finding. `prompt`, `candidate` and `grounding` are kept for every
+ * result (accepted or not) so the safety check can be shown. `simulated` marks a training-demo rejection;
+ * `prev` is the state it replaced, restored by "Undo".
+ */
+type AiState = {
+  status: 'pending' | 'done' | 'rejected' | 'error'; text?: string; reason?: string; model?: string; ms?: number;
+  prompt?: string; candidate?: string; grounding?: GroundingReport; simulated?: GroundingCheck['injected']; prev?: AiState;
+};
 type VerifyPatient = Patient & { location?: string };
 
 const OVERRIDE_REASONS = [
@@ -90,17 +100,38 @@ export default function VerifyPage() {
   // Ask the local model to explain the selected finding (grounded, optional).
   const sel = r?.findings.find((f) => f.id === selected) ?? null;
   const aiKey = sel ? `${sel.id}|${sel.summary}` : '';
+  // The verified facts sent to the model — also what the grounding check compares against.
+  const factsFor = (f: Finding) => ({ headline: f.headline, severity: f.severity, finding: f.summary, rationale: f.rationale, actions: f.actions,
+    patient: patientSummary(patient, r!) });
   useEffect(() => {
     if (!sel || health?.ai.state !== 'ready' || ai[aiKey]) return;
     setAi((m) => ({ ...m, [aiKey]: { status: 'pending' } }));
-    api.explain({ headline: sel.headline, severity: sel.severity, finding: sel.summary, rationale: sel.rationale, actions: sel.actions,
-      patient: patientSummary(patient, r!) })
+    api.explain(factsFor(sel))
       .then((res) => {
-        setAi((m) => ({ ...m, [aiKey]: res.accepted ? { status: 'done', text: res.text, model: res.model, ms: res.latencyMs } : { status: 'rejected', reason: res.reason, model: res.model } }));
+        const base = { model: res.model, ms: res.latencyMs, prompt: res.prompt, candidate: res.candidate, grounding: res.grounding };
+        setAi((m) => ({ ...m, [aiKey]: res.accepted ? { status: 'done', text: res.text, ...base } : { status: 'rejected', reason: res.reason, ...base } }));
         if (res.accepted) api.auditAppend('ai-rationale', r!.id, { rule: sel.rule, model: res.model, ms: res.latencyMs, patientId }).catch(() => {});
+        else api.auditAppend('ai-rejected', r!.id, { rule: sel.rule, model: res.model, reason: res.reason, patientId }).catch(() => {});
       })
       .catch((e) => setAi((m) => ({ ...m, [aiKey]: { status: 'error', reason: e.message } })));
   }, [aiKey, health?.ai.state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Training demo: alter one figure in the text on screen and send it through the real grounding check.
+  const simulateHallucination = async (f: Finding) => {
+    const cur = ai[aiKey];
+    const output = cur?.status === 'done' && cur.text ? cur.text : f.rationale;
+    try {
+      const res = await api.groundingCheck(factsFor(f), output, true);
+      setAi((m) => ({ ...m, [aiKey]: { status: 'rejected', reason: res.reason, model: cur?.model, ms: cur?.ms, prompt: cur?.prompt ?? res.facts,
+        candidate: res.checked, grounding: res.grounding, simulated: res.injected, prev: cur } }));
+      api.auditAppend('ai-rejected', r!.id, { rule: f.rule, reason: res.reason, simulated: true, patientId })
+        .then(() => qc.invalidateQueries({ queryKey: ['audit'] })).catch(() => {});
+    } catch (e: any) { setToast(`Grounding check failed: ${e.message}`); }
+  };
+  const undoSimulation = () => setAi((m) => {
+    const { [aiKey]: cur, ...rest } = m;
+    return cur?.prev ? { ...rest, [aiKey]: cur.prev } : rest;
+  });
 
   const loadScenario = (id: string) => {
     const s = SCENARIOS.find((x) => x.id === id)!;
@@ -188,7 +219,8 @@ export default function VerifyPage() {
                   <FindingRow key={f.id} f={f} open={f.id === selected} onOpen={() => setSelected(f.id === selected ? null : f.id)}
                               override={overrides[f.id]} acked={!!acks[f.id]} lineName={lineName}>
                     {f.id === selected && (
-                      <FindingDetail f={f} r={r} ai={ai[aiKey]} aiState={health?.ai.state}
+                      <FindingDetail f={f} r={r} ai={ai[aiKey]} aiState={health?.ai.state} aiModel={health?.ai.model}
+                        onSimulate={() => simulateHallucination(f)} onUndoSimulation={undoSimulation}
                         override={overrides[f.id]} acked={!!acks[f.id]}
                         onApply={() => { setOrder(f.lines[0], { dose: f.data.suggested }); api.auditAppend('dose-change', r.id, { rule: f.rule, line: f.lines[0], to: f.data.suggested, patientId }).catch(() => {}); }}
                         onOverride={(o) => { setOverrides((m) => ({ ...m, [f.id]: o })); api.auditAppend('override', r.id, { rule: f.rule, lines: f.lines, ...o, patientId }).then(() => qc.invalidateQueries({ queryKey: ['audit'] })).catch(() => {}); }}
@@ -432,8 +464,9 @@ function FindingRow({ f, open, onOpen, override, acked, lineName, children }: {
 
 type DetailTab = 'why' | 'calc' | 'label' | 'evidence' | 'signal' | 'faers';
 
-function FindingDetail({ f, r, ai, aiState, override, acked, onApply, onOverride, onAck }: {
-  f: Finding; r: VerifyResult; ai?: AiState; aiState?: string; override?: Override; acked: boolean;
+function FindingDetail({ f, r, ai, aiState, aiModel, onSimulate, onUndoSimulation, override, acked, onApply, onOverride, onAck }: {
+  f: Finding; r: VerifyResult; ai?: AiState; aiState?: string; aiModel?: string; onSimulate: () => void; onUndoSimulation: () => void;
+  override?: Override; acked: boolean;
   onApply: () => void; onOverride: (o: Override) => void; onAck: () => void;
 }) {
   const isDose = f.type === 'dose-peds' || f.type === 'dose-adult' || f.type === 'near-ceiling' || f.type === 'no-kb';
@@ -463,15 +496,32 @@ function FindingDetail({ f, r, ai, aiState, override, acked, onApply, onOverride
             <div className="rationale">
               <div className="rationale__head">
                 {useAi
-                  ? <span className="src src--ai">AI rationale · {ai!.model} · {((ai!.ms ?? 0) / 1000).toFixed(1)} s · figures verified</span>
-                  : <span className="src">Knowledge-base rationale</span>}
-                {ai?.status === 'pending' && <span className="ai-note"><span className="spinner" />AI rationale pending</span>}
-                {ai?.status === 'rejected' && <span className="ai-note ai-note--warn">AI text discarded — {ai.reason}</span>}
-                {ai?.status === 'error' && <span className="ai-note ai-note--warn">AI unavailable — {ai.reason}</span>}
-                {!ai && aiState === 'loading' && <span className="ai-note">AI model loading</span>}
-                {ai?.status === 'done' && <button className="linklike" type="button" onClick={() => setShowKb((v) => !v)}>{showKb ? 'Show AI rationale' : 'Show knowledge-base text'}</button>}
+                  ? <AiTag kind="ai" model={ai!.model} ms={ai!.ms} />
+                  : <AiTag kind="kb" note={
+                      ai?.status === 'rejected' ? <span className="ai-note--warn">AI output rejected{ai.simulated ? ' (simulated)' : ''}</span>
+                      : ai?.status === 'error' ? `AI unavailable: ${ai.reason}`
+                      : ai?.status === 'done' ? 'AI text hidden'
+                      : ai?.status === 'pending' ? 'AI rewording in progress'
+                      : aiState === 'loading' ? 'AI model loading'
+                      : aiState === 'disabled' ? 'AI off (DX_LLM=off)'
+                      : aiState === 'error' ? 'AI failed to load' : undefined} />}
+                {ai?.status === 'pending' && <AiPending model={aiModel} />}
+                {ai?.status === 'done' && <button className="linklike" type="button" onClick={() => setShowKb((v) => !v)}>{showKb ? 'Show AI text' : 'Show knowledge-base text'}</button>}
               </div>
               <p>{useAi ? ai!.text : f.rationale}</p>
+              {ai?.grounding && ai.prompt && ai.candidate != null && (
+                <SafetyCheck prompt={ai.prompt} output={ai.candidate} report={ai.grounding} accepted={ai.status === 'done'} reason={ai.reason} open={!!ai.simulated}
+                  note={ai.simulated
+                    ? <>Training simulation: {ai.prev?.status === 'done' ? `the AI's accepted text (${shortModel(ai.model)})` : 'the knowledge-base text, standing in for model output'} with one figure changed{ai.simulated.from ? ` (${ai.simulated.from} → ${ai.simulated.to})` : ` (added ${ai.simulated.to} mg)`}, then sent through the same server-side check as every real AI response.</>
+                    : ai.status === 'rejected' ? <>The model's text was discarded because it failed this check. The knowledge-base text above was shown instead.</> : undefined} />
+              )}
+              <div className="row ai-demo">
+                {ai?.simulated
+                  ? <button className="btn btn--sm" type="button" onClick={onUndoSimulation}>Undo simulation</button>
+                  : <button className="btn btn--sm btn--ghost" type="button" onClick={onSimulate} disabled={ai?.status === 'pending'}
+                      title="Training: change one figure in the text and run the real grounding check">Simulate hallucinated figure</button>}
+                <span className="muted">Training demo · shows the AI safety boundary</span>
+              </div>
             </div>
             <div className="two-col">
               {f.actions.length > 0 && <div><h4 className="eyebrow">Recommended action</h4><ul className="list">{f.actions.map((a) => <li key={a}>{a}</li>)}</ul></div>}

@@ -210,3 +210,35 @@ export interface Formulary {
 
 export interface AuditEntry { seq: number; at: number; event: string; ref: string; actor: string; payload: Record<string, any>; prev: string; hash: string }
 export interface ChainCheck { ok: boolean; entries: number; brokenAt?: number; head?: string; detail: string }
+
+/** Per-figure result of the numeric grounding check (backend prompts.grounding_report). */
+export interface GroundingReport {
+  figures: { value: string; grounded: boolean }[];
+  ungrounded: string[];
+  passed: boolean;
+  factFigures: number;
+}
+
+/** POST /ai/explain. `text` is present only when the grounding check accepted the output. */
+export interface ExplainResult {
+  accepted: boolean;
+  text?: string;
+  reason?: string;
+  model: string;
+  latencyMs: number;
+  prompt: string;
+  raw: string;
+  candidate: string;
+  grounding: GroundingReport;
+}
+
+/** POST /ai/grounding-check — the same accept/reject decision, on any text. */
+export interface GroundingCheck {
+  accepted: boolean;
+  reason?: string;
+  candidate: string;
+  grounding: GroundingReport;
+  checked: string;
+  injected: { text: string; from: string | null; to: string } | null;
+  facts: string;
+}

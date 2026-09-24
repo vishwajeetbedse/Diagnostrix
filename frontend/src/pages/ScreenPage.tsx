@@ -6,7 +6,8 @@ import type { ScreenCell, ScreenResult } from '../api/types';
 import { fmt, tallMan } from '../lib/format';
 import DrugInput from '../components/DrugInput';
 import { PairEvidence, SignalView } from '../components/Evidence';
-import { DrugName, ErrorNote, Loading, Sev, Tabs, type SevKey } from '../components/ui';
+import { DrugName, ErrorNote, Sev, Tabs, type SevKey } from '../components/ui';
+import { AiPending, AiTag } from '../components/Ai';
 
 const START = ['Dolo 650', 'Combiflam', 'Warf 5', 'Aspirin', 'Pan 40'];
 const VIA: Record<string, string> = { generic: 'Generic name', alias: 'Alternative name', brand: 'Brand', combination: 'Combination product', ddinter: 'DDInter', rxnorm: 'RxNorm' };
@@ -59,7 +60,7 @@ export default function ScreenPage() {
           </div>
           <Findings r={r} onPick={setPair} active={pair} />
           {pair && <PairPanel cell={pair} />}
-          {r.unresolved.length > 0 && <AiScreen entries={entries} r={r} ready={health?.ai.state === 'ready'} />}
+          {r.unresolved.length > 0 && <AiScreen entries={entries} r={r} ready={health?.ai.state === 'ready'} model={health?.ai.model} />}
         </>
       )}
       {!r && !run.isPending && <div className="empty">No screen run. Sample list contains a duplicate ingredient (Dolo 650, Combiflam: paracetamol).</div>}
@@ -171,7 +172,8 @@ function PairPanel({ cell }: { cell: ScreenCell }) {
   );
 }
 
-function AiScreen({ entries, r, ready }: { entries: string[]; r: ScreenResult; ready: boolean }) {
+/** Optional local-model screen for entries no database identified. Free-form output: labelled as unverified, not grounding-checked. */
+function AiScreen({ entries, r, ready, model }: { entries: string[]; r: ScreenResult; ready: boolean; model?: string }) {
   const m = useMutation({
     mutationFn: () => api.aiScreen({
       medications: entries, focus: r.unresolved,
@@ -181,11 +183,11 @@ function AiScreen({ entries, r, ready }: { entries: string[]; r: ScreenResult; r
   return (
     <section className="panel panel--ai">
       <header className="panel__head"><h2 className="panel__title">AI screen for unidentified entries</h2><span className="panel__meta">{r.unresolved.join(', ')}</span></header>
-      <div className="ai-banner">AI-generated. Not verified against any database — confirm with a pharmacist before acting.</div>
+      <div className="ai-banner">AI-generated. Not verified against any database and not covered by the numeric grounding check. Confirm with a pharmacist before acting.</div>
       <div className="panel__body">
         {m.data ? (
-          <><ul className="list">{m.data.lines.map((l) => <li key={l}>{l}</li>)}</ul><p className="muted mono" style={{ fontSize: 12, marginTop: 10 }}>{m.data.model} · {(m.data.latencyMs / 1000).toFixed(1)} s</p></>
-        ) : m.isPending ? <Loading label="Local model running (up to 60 s on CPU)" />
+          <div className="stack"><AiTag kind="ai" model={m.data.model} ms={m.data.latencyMs} /><ul className="list">{m.data.lines.map((l) => <li key={l}>{l}</li>)}</ul></div>
+        ) : m.isPending ? <AiPending model={model} />
           : m.error ? <ErrorNote error={m.error} />
           : ready ? <button className="btn" type="button" onClick={() => m.mutate()}><Bot />Ask the local model about {r.unresolved.join(', ')}</button>
           : <p className="muted">The AI model is not ready. {r.unresolved.join(', ')} could not be identified by RxNorm or DDInter.</p>}

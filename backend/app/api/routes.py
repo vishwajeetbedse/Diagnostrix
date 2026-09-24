@@ -85,6 +85,12 @@ class ExplainRequest(BaseModel):
     facts: dict
 
 
+class GroundingCheckRequest(BaseModel):
+    facts: dict
+    output: str = Field(max_length=4000)
+    inject: bool = False  # training demo: alter one figure before checking
+
+
 # ----------------------------------------------------------------- system
 @router.get("/system/health", tags=["system"])
 async def health(request: Request):
@@ -259,7 +265,7 @@ async def audit_list(request: Request, limit: int = 200):
 
 @router.post("/audit", tags=["audit"])
 async def audit_append(request: Request, body: AuditEvent):
-    allowed = {"override", "acknowledge", "dose-change", "sign", "ai-rationale"}
+    allowed = {"override", "acknowledge", "dose-change", "sign", "ai-rationale", "ai-rejected"}
     if body.event not in allowed:
         raise HTTPException(400, f"event must be one of {sorted(allowed)}")
     return C(request).audit.append(body.event, body.ref, body.payload)
@@ -277,24 +283,54 @@ async def audit_tamper(request: Request):
 
 
 # ---------------------------------------------------------------------- AI
-@router.post("/ai/explain", tags=["ai"])
-async def ai_explain(request: Request, body: ExplainRequest):
-    c = C(request)
-    facts = {k: (v[:10] if isinstance(v, list) else str(v)[:4000]) for k, v in body.facts.items()}
+def _facts(body_facts: dict) -> dict:
+    facts = {k: (v[:10] if isinstance(v, list) else str(v)[:4000]) for k, v in body_facts.items()}
     if not facts.get("rationale"):
         raise HTTPException(400, "facts.rationale is required")
+    return facts
+
+
+@router.post("/ai/explain", tags=["ai"])
+async def ai_explain(request: Request, body: ExplainRequest):
+    """Ask the local model to reword a finding's rationale, then run the grounding check.
+
+    Returns the prompt the model saw, its raw output and the per-figure
+    grounding report whether or not the text was accepted, so the UI can show
+    the safety check. `text` is present only when accepted.
+    """
+    c = C(request)
+    facts = _facts(body.facts)
     if not c.llm.ready:
         raise HTTPException(503, f"Model not ready ({c.llm.state})")
     t0 = time.time()
-    raw = await asyncio.to_thread(c.llm.generate, prompts.EXPLAIN_SYSTEM, prompts.explain_user(facts), 220)
-    text = prompts.clean_prose(raw)
-    info = {"model": c.llm.info()["model"], "latencyMs": int((time.time() - t0) * 1000)}
-    if len(text) < 40:
-        return {"accepted": False, "reason": "Model returned no usable text.", **info}
-    extra = prompts.ungrounded_numbers(text, prompts.facts_text(facts))
-    if extra:
-        return {"accepted": False, "reason": f"It contained figures not in the verified facts ({', '.join(extra)}).", **info}
-    return {"accepted": True, "text": text, **info}
+    prompt = prompts.explain_user(facts)
+    raw = await asyncio.to_thread(c.llm.generate, prompts.EXPLAIN_SYSTEM, prompt, 220)
+    verdict = prompts.judge(raw, prompts.facts_text(facts))
+    out = {"accepted": verdict["accepted"], "model": c.llm.info()["model"], "latencyMs": int((time.time() - t0) * 1000),
+           "prompt": prompt, "raw": raw, "candidate": verdict["candidate"], "grounding": verdict["grounding"]}
+    if verdict["accepted"]:
+        out["text"] = verdict["candidate"]
+    else:
+        out["reason"] = verdict["reason"]
+    return out
+
+
+@router.post("/ai/grounding-check", tags=["ai"])
+async def ai_grounding_check(body: GroundingCheckRequest):
+    """Run the same accept/reject check /ai/explain applies to model output, on any text.
+
+    Needs no model, so it works with the AI off. With `inject`, one figure is
+    first altered so it no longer matches the facts: a repeatable way to show
+    a rejection and the knowledge-base fallback during training or a demo.
+    """
+    facts = _facts(body.facts)
+    source = prompts.facts_text(facts)
+    output, injected = body.output, None
+    if body.inject:
+        injected = prompts.inject_fabricated_figure(output, source)
+        output = injected["text"]
+    verdict = prompts.judge(output, source)
+    return {**verdict, "checked": output, "injected": injected, "facts": source}
 
 
 @router.post("/ai/screen", tags=["ai"])
