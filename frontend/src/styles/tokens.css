@@ -1,0 +1,163 @@
+/* Diagnostix design tokens
+   Type: Atkinson Hyperlegible Next + Mono (Braille Institute) — designed so
+   look-alike characters (1 l I, 0 O, 5 S) never read as each other, which
+   matters when the text is a dose. Bundled locally: works offline. */
+
+:root {
+  color-scheme: light;
+
+  /* ground & surfaces — neutrals biased toward the cobalt accent */
+  --bg: #e9ecef;
+  --surface: #ffffff;
+  --surface-2: #f5f6f8;
+  --surface-3: #eceff2;
+  --line: #d8dde3;
+  --line-2: #b9c1cb;
+
+  --ink: #0c1829;
+  --ink-2: #465569;
+  --ink-3: #66758a;
+  --ink-4: #95a1b2;
+
+  --accent: #1f4a7d;
+  --accent-hover: #173a63;
+  --accent-weak: #e8edf3;
+  --accent-line: #bccadb;
+  --on-accent: #ffffff;
+
+  /* navigation rail — neutral slate in both themes */
+  --rail: #1e252e;
+  --rail-2: #2a323d;
+  --rail-line: #333c48;
+  --rail-ink: #e1e5ea;
+  --rail-ink-2: #98a2ae;
+  --rail-accent: #b8c9dc;
+
+  /* semantic state (never used as series colour) */
+  --crit: #c0262d;
+  --crit-strong: #9d1b21;
+  --crit-weak: #fdeeee;
+  --crit-line: #f2c2c4;
+  --warn: #945500;
+  --warn-weak: #fff5e0;
+  --warn-line: #efd29a;
+  --ok: #11743b;
+  --ok-weak: #e8f5ec;
+  --ok-line: #a9dbba;
+  --minor: #58677c;
+  --minor-weak: #eef1f5;
+
+  /* charts (dataviz reference palette, validated light + dark) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-wash: rgba(42, 120, 214, 0.1);
+  --grid: #e8ebf0;
+
+  /* elevation only for things that float (menus, dialogs); resting surfaces are flat */
+  --shadow-1: none;
+  --shadow-2: 0 2px 6px rgba(12, 24, 41, 0.14);
+  --shadow-3: 0 6px 20px rgba(8, 18, 34, 0.28);
+
+  --font: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono Variable", "Atkinson Hyperlegible Mono", ui-monospace, Consolas, "SFMono-Regular", monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 14px;
+  --fs-xl: 16px;
+  --fs-2xl: 18px;
+  --fs-3xl: 22px;
+
+  --r-sm: 2px;
+  --r-md: 3px;
+  --r-lg: 3px;
+
+  --rail-w: 188px;
+  --gutter: clamp(12px, 1.6vw, 20px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #070e19;
+    --surface: #0d1726;
+    --surface-2: #111d2f;
+    --surface-3: #172538;
+    --line: #1d2c42;
+    --line-2: #2a3d57;
+    --ink: #e6edf6;
+    --ink-2: #aab8ca;
+    --ink-3: #8193a9;
+    --ink-4: #5a6b82;
+    --accent: #86a8cf;
+    --accent-hover: #a3bedd;
+    --accent-weak: #1a2636;
+    --accent-line: #2f435c;
+    --on-accent: #06101c;
+    --rail: #0c1117;
+    --rail-2: #18202a;
+    --rail-line: #1f2833;
+    --crit: #ff7a73;
+    --crit-strong: #ff9a94;
+    --crit-weak: #3a1417;
+    --crit-line: #6a2428;
+    --warn: #f2b654;
+    --warn-weak: #33250d;
+    --warn-line: #5e4516;
+    --ok: #4fcb85;
+    --ok-weak: #0e2e1e;
+    --ok-line: #1d5a39;
+    --minor: #9aa9bd;
+    --minor-weak: #172538;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-wash: rgba(57, 135, 229, 0.14);
+    --grid: #1b2a3f;
+    --shadow-1: none;
+    --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #070e19;
+  --surface: #0d1726;
+  --surface-2: #111d2f;
+  --surface-3: #172538;
+  --line: #1d2c42;
+  --line-2: #2a3d57;
+  --ink: #e6edf6;
+  --ink-2: #aab8ca;
+  --ink-3: #8193a9;
+  --ink-4: #5a6b82;
+  --accent: #86a8cf;
+  --accent-hover: #a3bedd;
+  --accent-weak: #1a2636;
+  --accent-line: #2f435c;
+  --on-accent: #06101c;
+  --rail: #0c1117;
+  --rail-2: #18202a;
+  --rail-line: #1f2833;
+  --crit: #ff7a73;
+  --crit-strong: #ff9a94;
+  --crit-weak: #3a1417;
+  --crit-line: #6a2428;
+  --warn: #f2b654;
+  --warn-weak: #33250d;
+  --warn-line: #5e4516;
+  --ok: #4fcb85;
+  --ok-weak: #0e2e1e;
+  --ok-line: #1d5a39;
+  --minor: #9aa9bd;
+  --minor-weak: #172538;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-wash: rgba(57, 135, 229, 0.14);
+  --grid: #1b2a3f;
+  --shadow-1: none;
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}

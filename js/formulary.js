@@ -1,0 +1,438 @@
+/**
+ * Diagnostix CDSS — Clinical Knowledge Base (mock data layer)
+ * ------------------------------------------------------------------
+ * Represents the pharmacy team's curated pharmacological database.
+ *
+ * DEMONSTRATION DATA ONLY. Limits are simplified, drawn from common
+ * reference ranges, and must be validated by the pharmacy team against
+ * the institution's formulary (Lexicomp / BNFc / product labelling)
+ * before any clinical use.
+ *
+ * Schema per medication
+ *   id                  stable key
+ *   name / aka          display name / alternative name
+ *   cls                 pharmacological class
+ *   route               default route for this demo
+ *   adultMaxDaily       maximum safe adult daily dose (mg/day)
+ *   pedsMaxMgPerKgDay   maximum pediatric weight-based dose (mg/kg/day)
+ *   contraindicatedWith severe drug–drug contraindications (ids)
+ *   minAgeYears         optional hard age floor (with minAgeNote)
+ *   renal / geriatric   optional advisory thresholds
+ *   doseStep            practical dosing increment used for dose suggestions
+ *   brands              example brand names (demonstration mapping)
+ *
+ * Works as a browser global (window.DX.formulary) and as a CommonJS
+ * module (require) so the engine can be unit tested in Node.
+ */
+(function (root) {
+  'use strict';
+
+  const VERSION = 'DX-KB 2026.09 (demo)';
+
+  const DRUGS = [
+    {
+      id: 'acetaminophen',
+      brands: ['Dolo', 'Crocin', 'Calpol', 'Tylenol', 'Panadol'],
+      name: 'Acetaminophen',
+      aka: 'Paracetamol',
+      cls: 'Analgesic · antipyretic',
+      route: 'PO',
+      adultMaxDaily: 4000,
+      pedsMaxMgPerKgDay: 75,
+      doseStep: 10,
+      riskTags: ['Hepatotoxic dose ceiling', 'Frequent pediatric error'],
+      contraindicatedWith: [],
+      toxicity:
+        'Exposure above this threshold saturates hepatic glucuronidation and sulfation, shunting metabolism toward CYP2E1-mediated formation of N-acetyl-p-benzoquinone imine (NAPQI); glutathione depletion then precipitates centrilobular hepatocellular necrosis.',
+      monitoring: [
+        'Cumulative daily intake from all sources, including combination products',
+        'Hepatic transaminases (ALT/AST) if exposure exceeds 150 mg/kg',
+        'Serum acetaminophen concentration at ≥ 4 h if overdose is suspected (Rumack–Matthew nomogram)'
+      ]
+    },
+    {
+      id: 'warfarin',
+      brands: ['Coumadin', 'Warf'],
+      name: 'Warfarin',
+      aka: 'Coumadin',
+      cls: 'Vitamin K antagonist anticoagulant',
+      route: 'PO',
+      adultMaxDaily: 10,
+      pedsMaxMgPerKgDay: 0.2,
+      doseStep: 0.5,
+      riskTags: ['ISMP high-alert', 'Narrow therapeutic index'],
+      contraindicatedWith: ['amiodarone', 'fluconazole', 'clarithromycin', 'ibuprofen'],
+      geriatric: {
+        age: 65,
+        maxDaily: 5,
+        note: 'Older adults show heightened sensitivity to vitamin K antagonism; initiation doses ≤ 5 mg/day are recommended.'
+      },
+      toxicity:
+        'Supratherapeutic inhibition of vitamin K epoxide reductase depletes functional clotting factors II, VII, IX and X, producing INR elevation with attendant risk of intracranial and gastrointestinal haemorrhage.',
+      monitoring: [
+        'INR daily until stable within the therapeutic range (typically 2.0–3.0)',
+        'Haemoglobin and clinical signs of bleeding',
+        'Dietary vitamin K intake and new interacting medications'
+      ]
+    },
+    {
+      id: 'amiodarone',
+      brands: ['Cordarone'],
+      name: 'Amiodarone',
+      aka: 'Cordarone',
+      cls: 'Class III antiarrhythmic',
+      route: 'PO',
+      adultMaxDaily: 1600,
+      pedsMaxMgPerKgDay: 15,
+      doseStep: 100,
+      riskTags: ['ISMP high-alert', 'QT-prolonging', 'Boxed warning'],
+      contraindicatedWith: ['warfarin', 'digoxin', 'clarithromycin', 'fluconazole'],
+      toxicity:
+        'Excess exposure accentuates IKr potassium-channel blockade and non-competitive β-adrenergic antagonism, producing sinus bradycardia, AV block, QTc prolongation and torsades de pointes; cumulative exposure drives pulmonary, hepatic and thyroid toxicity.',
+      monitoring: [
+        '12-lead ECG — heart rate, PR and QTc intervals',
+        'Thyroid function tests and hepatic transaminases at baseline and every 6 months',
+        'Baseline chest radiograph and pulmonary function tests'
+      ]
+    },
+    {
+      id: 'digoxin',
+      brands: ['Lanoxin'],
+      name: 'Digoxin',
+      aka: 'Lanoxin',
+      cls: 'Cardiac glycoside',
+      route: 'PO',
+      adultMaxDaily: 0.25,
+      pedsMaxMgPerKgDay: 0.01,
+      doseStep: 0.0625,
+      riskTags: ['ISMP high-alert', 'Narrow therapeutic index'],
+      contraindicatedWith: ['amiodarone', 'clarithromycin'],
+      renal: {
+        threshold: 50,
+        note: 'Digoxin is ~70% renally eliminated unchanged; reduce the maintenance dose or extend the interval when CrCl < 50 mL/min.'
+      },
+      geriatric: {
+        age: 65,
+        maxDaily: 0.125,
+        note: 'AGS Beers Criteria: avoid maintenance doses > 0.125 mg/day in older adults owing to reduced renal clearance and toxicity risk.'
+      },
+      toxicity:
+        'Excess Na⁺/K⁺-ATPase inhibition raises intracellular calcium and vagal tone, manifesting as nausea, xanthopsia, bradyarrhythmia, AV block and bidirectional ventricular tachycardia; toxicity is potentiated by hypokalaemia and typically appears above 2.0 ng/mL.',
+      monitoring: [
+        'Serum digoxin concentration ≥ 6 h post-dose (heart-failure target 0.5–0.9 ng/mL)',
+        'Serum potassium, magnesium and renal function',
+        'ECG for bradyarrhythmia or new AV block'
+      ]
+    },
+    {
+      id: 'clarithromycin',
+      brands: ['Biaxin', 'Claribid'],
+      name: 'Clarithromycin',
+      aka: 'Biaxin',
+      cls: 'Macrolide antibacterial',
+      route: 'PO',
+      adultMaxDaily: 1000,
+      pedsMaxMgPerKgDay: 15,
+      doseStep: 125,
+      riskTags: ['QT-prolonging', 'Strong CYP3A4 inhibitor'],
+      contraindicatedWith: ['warfarin', 'amiodarone', 'digoxin'],
+      renal: {
+        threshold: 30,
+        note: 'Reduce the dose by 50% when CrCl < 30 mL/min.'
+      },
+      toxicity:
+        'Supratherapeutic exposure produces dose-dependent QTc prolongation and hepatocellular injury, and amplifies mechanism-based CYP3A4 inhibition, raising toxicity of co-administered substrates.',
+      monitoring: [
+        'ECG (QTc) in patients with cardiac risk factors or QT-prolonging co-medication',
+        'Hepatic function tests',
+        'Gastrointestinal tolerance and signs of C. difficile infection'
+      ]
+    },
+    {
+      id: 'fluconazole',
+      brands: ['Diflucan', 'Forcan'],
+      name: 'Fluconazole',
+      aka: 'Diflucan',
+      cls: 'Triazole antifungal',
+      route: 'PO',
+      adultMaxDaily: 800,
+      pedsMaxMgPerKgDay: 12,
+      doseStep: 50,
+      riskTags: ['QT-prolonging', 'CYP2C9 / 3A4 inhibitor'],
+      contraindicatedWith: ['warfarin', 'amiodarone'],
+      renal: {
+        threshold: 50,
+        note: 'After the loading dose, reduce the maintenance dose by 50% when CrCl ≤ 50 mL/min.'
+      },
+      toxicity:
+        'Supratherapeutic azole exposure is associated with QTc prolongation, hepatotoxicity and exaggerated inhibition of CYP2C9 and CYP3A4 substrates.',
+      monitoring: [
+        'Hepatic transaminases during prolonged therapy',
+        'ECG (QTc) with concurrent QT-prolonging agents',
+        'Renal function for dose adjustment'
+      ]
+    },
+    {
+      id: 'lithium',
+      brands: ['Eskalith', 'Lithosun', 'Licab'],
+      name: 'Lithium carbonate',
+      aka: 'Eskalith',
+      cls: 'Mood stabiliser',
+      route: 'PO',
+      adultMaxDaily: 1800,
+      pedsMaxMgPerKgDay: 30,
+      minAgeYears: 7,
+      minAgeNote: 'Safety and efficacy are not established in children under 7 years.',
+      doseStep: 150,
+      riskTags: ['Narrow therapeutic index', 'Boxed warning'],
+      contraindicatedWith: ['ibuprofen'],
+      renal: {
+        threshold: 30,
+        note: 'Lithium clearance parallels glomerular filtration; avoid or substantially reduce the dose when CrCl < 30 mL/min.'
+      },
+      toxicity:
+        'Lithium has a therapeutic range of 0.6–1.2 mmol/L; supratherapeutic dosing produces coarse tremor, ataxia, dysarthria, confusion and seizures, with risk of persistent cerebellar neurotoxicity (SILENT) and nephrogenic diabetes insipidus.',
+      monitoring: [
+        '12-hour trough serum lithium 5 days after initiation or any dose change',
+        'Renal function, serum sodium and hydration status',
+        'Thyroid function every 6 months'
+      ]
+    },
+    {
+      id: 'ibuprofen',
+      brands: ['Brufen', 'Advil', 'Motrin', 'Ibugesic'],
+      name: 'Ibuprofen',
+      aka: 'Brufen',
+      cls: 'Non-steroidal anti-inflammatory (NSAID)',
+      route: 'PO',
+      adultMaxDaily: 3200,
+      pedsMaxMgPerKgDay: 40,
+      minAgeYears: 0.5,
+      minAgeNote: 'Not established for infants under 6 months owing to immature renal function.',
+      doseStep: 50,
+      riskTags: ['GI bleed risk', 'Nephrotoxic'],
+      contraindicatedWith: ['warfarin', 'lithium'],
+      renal: {
+        threshold: 30,
+        note: 'Avoid when CrCl < 30 mL/min; NSAIDs precipitate acute kidney injury in renally impaired or volume-depleted patients.'
+      },
+      geriatric: {
+        age: 65,
+        note: 'AGS Beers Criteria: avoid chronic NSAID use in older adults unless alternatives are ineffective and gastroprotection is co-prescribed.'
+      },
+      toxicity:
+        'Supratherapeutic NSAID exposure increases the risk of gastrointestinal ulceration and haemorrhage, acute kidney injury through afferent arteriolar vasoconstriction, and cardiovascular thrombotic events.',
+      monitoring: [
+        'Serum creatinine and urine output',
+        'Signs of gastrointestinal bleeding (melaena, haematemesis, falling haemoglobin)',
+        'Blood pressure'
+      ]
+    },
+    {
+      id: 'tramadol',
+      brands: ['Ultram', 'Contramal'],
+      name: 'Tramadol',
+      aka: 'Ultram',
+      cls: 'Opioid agonist · SNRI',
+      route: 'PO',
+      adultMaxDaily: 400,
+      pedsMaxMgPerKgDay: 8,
+      minAgeYears: 12,
+      minAgeNote: 'FDA contraindication in children under 12 years: ultra-rapid CYP2D6 metabolism can produce fatal respiratory depression.',
+      doseStep: 25,
+      riskTags: ['Opioid', 'Serotonergic', 'Lowers seizure threshold'],
+      contraindicatedWith: ['linezolid'],
+      renal: {
+        threshold: 30,
+        note: 'Extend the dosing interval to every 12 h and cap at 200 mg/day when CrCl < 30 mL/min.'
+      },
+      geriatric: {
+        age: 75,
+        maxDaily: 300,
+        note: 'Adults over 75 years should not exceed 300 mg/day owing to reduced clearance.'
+      },
+      toxicity:
+        'Exceeding the daily ceiling increases the risk of seizures, serotonergic toxicity and opioid-induced respiratory depression, amplified in CYP2D6 ultra-rapid metabolisers through excess O-desmethyltramadol (M1).',
+      monitoring: [
+        'Respiratory rate and sedation score',
+        'Seizure activity, particularly with other seizure-threshold-lowering drugs',
+        'Signs of serotonin syndrome (clonus, hyperthermia, agitation)'
+      ]
+    },
+    {
+      id: 'linezolid',
+      brands: ['Zyvox', 'Linospan'],
+      name: 'Linezolid',
+      aka: 'Zyvox',
+      cls: 'Oxazolidinone antibacterial',
+      route: 'PO',
+      adultMaxDaily: 1200,
+      pedsMaxMgPerKgDay: 30,
+      doseStep: 50,
+      riskTags: ['Reversible MAO inhibitor', 'Myelosuppression'],
+      contraindicatedWith: ['tramadol'],
+      toxicity:
+        'Excess exposure potentiates reversible monoamine oxidase inhibition and mitochondrial protein-synthesis inhibition, producing thrombocytopenia, lactic acidosis and peripheral or optic neuropathy.',
+      monitoring: [
+        'Complete blood count weekly (platelets in particular)',
+        'Serum lactate if unexplained acidosis develops',
+        'Visual acuity and signs of serotonergic toxicity'
+      ]
+    }
+  ];
+
+  /**
+   * Interaction monographs — the clinical detail behind each contraindicated
+   * pair. Keyed by the two drug ids sorted alphabetically and joined with "|".
+   */
+  const MONOGRAPHS = {
+    'amiodarone|warfarin': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic',
+      mechanism:
+        'Amiodarone and its active metabolite desethylamiodarone inhibit CYP2C9 and CYP3A4, reducing clearance of both S- and R-warfarin.',
+      effect:
+        'Potentiated anticoagulation with INR elevation typically emerging over 1–4 weeks and persisting for months after discontinuation, owing to amiodarone’s ~50-day elimination half-life.',
+      management:
+        'Empirically reduce the warfarin dose by 30–50% on amiodarone initiation and obtain an INR at least weekly for the first 6–8 weeks.'
+    },
+    'fluconazole|warfarin': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic',
+      mechanism:
+        'Fluconazole is a potent CYP2C9 inhibitor — the principal clearance pathway for S-warfarin, the more pharmacologically active enantiomer.',
+      effect: 'Marked INR elevation within 3–5 days with significant risk of major haemorrhage.',
+      management:
+        'Avoid the combination where an alternative antifungal is suitable; otherwise pre-emptively reduce the warfarin dose and monitor INR every 2–3 days.'
+    },
+    'clarithromycin|warfarin': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic',
+      mechanism:
+        'Clarithromycin is a strong mechanism-based CYP3A4 inhibitor, reducing R-warfarin clearance; infection-related changes in vitamin K intake compound the effect.',
+      effect: 'Supratherapeutic INR and bleeding events, typically within the first week of co-administration.',
+      management:
+        'Prefer a non-interacting antibacterial where appropriate; if unavoidable, check the INR within 3–5 days of initiation.'
+    },
+    'ibuprofen|warfarin': {
+      severity: 'Major',
+      kind: 'Pharmacodynamic',
+      mechanism:
+        'Reversible COX-1 inhibition impairs thromboxane A₂-mediated platelet aggregation while prostaglandin depletion compromises gastric mucosal defence.',
+      effect: 'Additive haemorrhagic risk — notably upper gastrointestinal bleeding — independent of the INR.',
+      management:
+        'Substitute acetaminophen for analgesia; if an NSAID is unavoidable, co-prescribe a proton-pump inhibitor and limit the duration.'
+    },
+    'amiodarone|digoxin': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic',
+      mechanism: 'Amiodarone inhibits P-glycoprotein-mediated renal and intestinal efflux of digoxin.',
+      effect:
+        'Serum digoxin concentrations rise by approximately 70–100%, precipitating bradyarrhythmia, AV block and digitalis toxicity.',
+      management:
+        'Reduce the digoxin dose by 50% on amiodarone initiation and obtain a serum digoxin level within one week.'
+    },
+    'amiodarone|clarithromycin': {
+      severity: 'Contraindicated',
+      kind: 'Pharmacokinetic + pharmacodynamic',
+      mechanism:
+        'Additive blockade of the delayed-rectifier potassium current (IKr), compounded by clarithromycin inhibition of CYP3A4-mediated amiodarone metabolism.',
+      effect: 'Pronounced QTc prolongation with risk of torsades de pointes and sudden cardiac death.',
+      management:
+        'Avoid co-administration and select a non-QT-prolonging antimicrobial. If unavoidable, obtain baseline and serial ECGs and maintain K⁺ > 4.0 mmol/L and Mg²⁺ > 2.0 mg/dL.'
+    },
+    'amiodarone|fluconazole': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic + pharmacodynamic',
+      mechanism:
+        'Fluconazole inhibits CYP3A4 and CYP2C9, elevating amiodarone exposure, while both agents independently block IKr.',
+      effect: 'Additive QTc prolongation and risk of torsades de pointes.',
+      management:
+        'Obtain a baseline ECG and avoid the combination if QTc exceeds 500 ms; correct potassium and magnesium before co-administration.'
+    },
+    'clarithromycin|digoxin': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic',
+      mechanism:
+        'Clarithromycin inhibits P-glycoprotein and suppresses gut-flora (Eggerthella lenta) inactivation of digoxin, increasing its bioavailability.',
+      effect: 'Elevated serum digoxin with nausea, visual disturbance and ventricular arrhythmia.',
+      management:
+        'Monitor serum digoxin and consider empirical dose reduction, or select an antibacterial without P-glycoprotein inhibition.'
+    },
+    'ibuprofen|lithium': {
+      severity: 'Major',
+      kind: 'Pharmacokinetic',
+      mechanism:
+        'NSAID inhibition of renal prostaglandin synthesis reduces glomerular filtration and enhances proximal tubular lithium reabsorption.',
+      effect:
+        'Serum lithium may rise by 15–60%, producing coarse tremor, ataxia, confusion and potentially irreversible neurotoxicity.',
+      management:
+        'Avoid; use acetaminophen for analgesia. If unavoidable, check serum lithium within 5 days and after any NSAID dose change.'
+    },
+    'linezolid|tramadol': {
+      severity: 'Contraindicated',
+      kind: 'Pharmacodynamic',
+      mechanism:
+        'Linezolid is a reversible non-selective monoamine oxidase inhibitor; tramadol inhibits serotonin and norepinephrine reuptake.',
+      effect:
+        'Risk of serotonin syndrome — inducible clonus, hyperthermia and autonomic instability — and a lowered seizure threshold.',
+      management:
+        'Do not co-administer. Select a non-serotonergic analgesic and observe for serotonergic toxicity if tramadol was recently discontinued.'
+    }
+  };
+
+  /**
+   * Fixed-dose combination products → active ingredients. Lets the screen
+   * catch hidden duplicates (e.g. Dolo 650 + Combiflam = two sources of
+   * acetaminophen). Demonstration mapping — verify with the pharmacy team.
+   */
+  const COMBINATIONS = {
+    Combiflam: ['ibuprofen', 'acetaminophen'],
+    Ultracet: ['tramadol', 'acetaminophen']
+  };
+
+  const FREQUENCIES = [
+    { id: 'daily', label: 'Once daily', perDay: 1 },
+    { id: 'q12h', label: 'Every 12 h', perDay: 2 },
+    { id: 'q8h', label: 'Every 8 h', perDay: 3 },
+    { id: 'q6h', label: 'Every 6 h', perDay: 4 },
+    { id: 'q4h', label: 'Every 4 h', perDay: 6 }
+  ];
+
+  function pairKey(a, b) {
+    return [a, b].sort().join('|');
+  }
+
+  function getDrug(id) {
+    return DRUGS.find((d) => d.id === id) || null;
+  }
+
+  function getFrequency(id) {
+    return FREQUENCIES.find((f) => f.id === id) || FREQUENCIES[0];
+  }
+
+  function getMonograph(a, b) {
+    return MONOGRAPHS[pairKey(a, b)] || null;
+  }
+
+  /** Data-integrity audit: every contraindication must be symmetric and documented. */
+  function integrityReport() {
+    const issues = [];
+    DRUGS.forEach((d) => {
+      d.contraindicatedWith.forEach((other) => {
+        const o = getDrug(other);
+        if (!o) issues.push(`${d.name}: unknown contraindication "${other}"`);
+        else if (!o.contraindicatedWith.includes(d.id))
+          issues.push(`${d.name} ↔ ${o.name}: contraindication recorded on one side only`);
+        if (!getMonograph(d.id, other)) issues.push(`${d.name} ↔ ${other}: missing interaction monograph`);
+      });
+    });
+    return { ok: issues.length === 0, issues };
+  }
+
+  const api = { VERSION, DRUGS, MONOGRAPHS, COMBINATIONS, FREQUENCIES, pairKey, getDrug, getFrequency, getMonograph, integrityReport };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.DX = root.DX || {};
+  root.DX.formulary = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);

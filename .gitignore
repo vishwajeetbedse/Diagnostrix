@@ -1,0 +1,38 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Local settings (see .env.example)
+.env
+.env.*
+!.env.example
+
+# Runtime databases: response cache, DDInter import (subject to DDInter's terms — see DATA-LICENSE.md),
+# audit ledger, patient records. Created on each machine; never commit them.
+backend/data/*.sqlite3*
+backend/data/*.db
+backend/data/*.tmp
+*.db
+
+# DDInter CSVs if downloaded by hand for `import_ddinter --from-dir`
+ddinter_downloads_code_*.csv
+
+# Hugging Face model weights, if HF_HOME is pointed inside the repo (default is ~/.cache/huggingface)
+.hf-cache/
+.cache/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local before/after comparison images from the UI redesign (README screenshots live in docs/)
+screenshots/

@@ -1,0 +1,48 @@
+/* Charts — thin marks, hairline grid, text in text tokens. */
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.ref-line { stroke: var(--ink-3); stroke-width: 1.5; }
+.axis-text { fill: var(--ink-3); font-size: 11px; font-family: var(--mono); }
+.axis-text--title { font-family: var(--font); font-size: 11px; }
+.crosshair { stroke: var(--ink-4); stroke-width: 1; }
+
+.chart-tip {
+  position: absolute; z-index: 5; pointer-events: none; display: grid; gap: 2px;
+  padding: 5px 8px; border-radius: 2px; background: var(--ink); color: var(--surface);
+  font-size: 12px; box-shadow: var(--shadow-2); white-space: nowrap;
+}
+.chart-tip strong { font-weight: 650; }
+.chart-tip .mono { font-size: 11.5px; opacity: .9; }
+
+/* bar list */
+.barlist { display: grid; gap: 2px; }
+.barlist__row { position: relative; display: grid; grid-template-columns: minmax(96px, 38%) minmax(0, 1fr); align-items: center; gap: 12px; padding: 3px 6px; }
+.barlist__row.is-hover { background: var(--surface-2); }
+.barlist__label { font-size: var(--fs-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barlist__track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.barlist__bar { height: 10px; background: var(--series-1); flex: none; max-width: calc(100% - 52px); }
+.barlist__value { font-size: 12px; color: var(--ink-2); }
+.barlist__tip { left: 38%; top: -44px; }
+
+/* trend */
+.trend { position: relative; width: 100%; min-height: 168px; }
+.trend svg { display: block; overflow: visible; }
+.trend__line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.trend__area { fill: var(--series-wash); }
+.trend__dot { fill: var(--series-1); stroke: var(--surface); stroke-width: 2; }
+.trend__tip { transform: translateX(-50%); }
+
+/* forest plot */
+.forest { position: relative; width: 100%; }
+.forest svg { display: block; }
+.forest__hit { fill: transparent; }
+.forest__hit.is-hover { fill: var(--surface-2); }
+.forest__label { fill: var(--ink-2); font-size: 12.5px; font-family: var(--font); }
+.forest__label.is-signal { fill: var(--ink); font-weight: 700; }
+.forest__tip { left: 32%; }
+.whisker { stroke-width: 2; stroke-linecap: round; }
+.whisker.s1 { stroke: var(--series-1); } .whisker.s2 { stroke: var(--series-2); } .whisker.s3 { stroke: var(--series-3); }
+.marker.s1 { fill: var(--series-1); } .marker.s2 { fill: var(--series-2); } .marker.s3 { fill: var(--series-3); }
+.marker--ring { stroke: var(--surface); stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 10px; font-size: var(--fs-sm); color: var(--ink-2); }
+.legend__item { display: inline-flex; align-items: center; gap: 7px; }
+.legend__ref { width: 14px; height: 0; border-top: 1.5px solid var(--ink-3); }

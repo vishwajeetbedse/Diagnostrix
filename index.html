@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diagnostix CDSS</title>
+<meta name="description" content="Clinical decision support for medication order verification — dose range checking, drug–drug interaction screening and pharmacist-grade order check alerts.">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Title bar -->
+  <header class="titlebar">
+    <div class="titlebar__brand">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5 3 4.2v4.9c0 4.3 3 7.9 7 9.4 4-1.5 7-5.1 7-9.4V4.2L10 1.5Z" fill="#2c6cb3"/><path d="M8.6 6h2.8v2.6H14v2.8h-2.6V14H8.6v-2.6H6V8.6h2.6z" fill="#fff"/></svg>
+      <span class="titlebar__name">Diagnostix CDSS</span>
+      <span class="titlebar__sep">|</span>
+      <span class="titlebar__module">Medication Order Verification</span>
+    </div>
+    <div class="titlebar__meta">
+      <span class="titlebar__env">TRAINING</span>
+      <span class="titlebar__user">Clinical Pharmacist · Station 04</span>
+      <span class="titlebar__clock" id="clock">--</span>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div class="toolbar" role="toolbar" aria-label="Order actions">
+    <button class="tbtn tbtn--primary" id="btn-verify" type="button">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2 3.3v4c0 3.5 2.5 6.5 6 7.7 3.5-1.2 6-4.2 6-7.7v-4L8 1Z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m5.3 8 1.9 1.9 3.6-3.8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      Verify Orders <kbd>F9</kbd>
+    </button>
+    <button class="tbtn" id="btn-clear" type="button">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6 4V2.5h4V4M4.5 4l.7 9.5h5.6l.7-9.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+      Clear Orders
+    </button>
+    <span class="toolbar__sep" aria-hidden="true"></span>
+    <label class="toolbar__label" for="scenario">Test patient</label>
+    <select id="scenario" class="toolbar__select"></select>
+  </div>
+
+  <!-- Patient banner -->
+  <section class="ptbanner" aria-label="Patient banner">
+    <div class="ptbanner__avatar" id="b-initials" aria-hidden="true">--</div>
+    <div class="ptbanner__id">
+      <div class="ptbanner__name" id="b-name">—</div>
+      <div class="ptbanner__sub"><span id="b-age">—</span> · <span id="b-sex">—</span> · MRN <span class="num" id="b-mrn">—</span></div>
+    </div>
+    <dl class="ptbanner__facts">
+      <div><dt>Weight</dt><dd class="num" id="b-weight">—</dd></div>
+      <div><dt>Height</dt><dd class="num" id="b-height">—</dd></div>
+      <div><dt>BSA</dt><dd class="num" id="b-bsa">—</dd></div>
+      <div><dt>Renal fn.</dt><dd class="num" id="b-renal">—</dd></div>
+      <div><dt>Location</dt><dd id="b-loc">—</dd></div>
+      <div><dt>Allergies</dt><dd>No known drug allergies</dd></div>
+    </dl>
+    <div class="ptbanner__flag" id="b-band">—</div>
+  </section>
+
+  <div class="body">
+    <nav class="sidenav" aria-label="Modules">
+      <div class="sidenav__group">Workspace</div>
+      <button class="sidenav__item" id="nav-verify" data-view="verify" type="button" aria-current="page">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="1.5" width="11" height="13" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h3.5" stroke="currentColor" stroke-width="1.3"/></svg>
+        Order Verification
+      </button>
+      <button class="sidenav__item" id="nav-screen" data-view="screen" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="5" width="8" height="5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="6.5" y="6" width="8" height="5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+        Interaction Screen
+      </button>
+      <button class="sidenav__item" id="nav-formulary" data-view="formulary" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h4.5a1.5 1.5 0 0 1 1 .4 1.5 1.5 0 0 1 1-.4h4.5v10H9a1 1 0 0 0-1 1 1 1 0 0 0-1-1H2.5z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
+        Clinical Knowledge Base
+      </button>
+      <button class="sidenav__item" id="nav-audit" data-view="audit" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.5V8l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+        Audit Trail <span class="sidenav__count" id="audit-count">0</span>
+      </button>
+      <div class="sidenav__foot">
+        <div>Rules engine 1.0</div>
+        <div id="nav-kb">—</div>
+        <div id="nav-ai">—</div>
+      </div>
+    </nav>
+
+    <main class="content">
+
+      <!-- ================= ORDER VERIFICATION ================= -->
+      <div class="view view--verify" id="view-verify">
+
+        <section class="panel panel--params" aria-labelledby="h-params">
+          <header class="panel__head"><h2 id="h-params">Patient Parameters</h2></header>
+          <div class="panel__body">
+            <div class="form">
+              <label for="pt-name">Name</label>
+              <input id="pt-name" type="text" autocomplete="off">
+
+              <label for="pt-age">Age</label>
+              <div class="unit-input"><input id="pt-age" type="number" min="0" max="120" step="0.1" inputmode="decimal"><span>years</span></div>
+
+              <label for="pt-sex">Sex</label>
+              <select id="pt-sex"><option value="F">Female</option><option value="M">Male</option></select>
+
+              <label for="pt-weight">Weight</label>
+              <div class="unit-input"><input id="pt-weight" type="number" min="0.3" max="350" step="0.1" inputmode="decimal"><span>kg</span></div>
+
+              <label for="pt-height">Height</label>
+              <div class="unit-input"><input id="pt-height" type="number" min="25" max="250" step="0.5" inputmode="decimal"><span>cm</span></div>
+
+              <label for="pt-scr">Serum creat.</label>
+              <div class="unit-input"><input id="pt-scr" type="number" min="0.1" max="20" step="0.1" inputmode="decimal"><span>mg/dL</span></div>
+            </div>
+          </div>
+          <div class="subhead">Calculated Values</div>
+          <table class="kv" id="metrics" aria-live="polite"></table>
+        </section>
+
+        <div class="stack">
+          <section class="panel" aria-labelledby="h-orders">
+            <header class="panel__head">
+              <h2 id="h-orders">Medication Orders</h2>
+              <span class="panel__meta">CPOE · maximum 2 concurrent lines</span>
+            </header>
+            <div class="grid-wrap">
+              <table class="grid grid--orders">
+                <thead>
+                  <tr>
+                    <th class="c-act">Active</th>
+                    <th class="c-num">#</th>
+                    <th class="c-drug">Medication</th>
+                    <th class="c-dose">Dose (mg)</th>
+                    <th class="c-freq">Frequency</th>
+                    <th>Route</th>
+                    <th class="r">Daily total</th>
+                    <th class="r">Max / day</th>
+                    <th class="c-pct">% of max</th>
+                    <th>Check</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-body"></tbody>
+              </table>
+            </div>
+            <div class="basis" id="basis"></div>
+          </section>
+
+          <section class="panel" id="panel-checks" aria-labelledby="h-checks">
+            <header class="panel__head">
+              <h2 id="h-checks">Order Check Results</h2>
+              <span class="panel__meta num" id="result-ref">—</span>
+            </header>
+            <div id="result"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ================= INTERACTION SCREEN ================= -->
+      <div class="view" id="view-screen" hidden>
+        <section class="panel">
+          <header class="panel__head">
+            <h2>Medication List Interaction Screen</h2>
+            <span class="panel__meta">Generic names, brand names and combination products</span>
+          </header>
+          <div class="panel__body screen-form">
+            <label for="scr-input">Medications — comma-separated or one per line</label>
+            <textarea id="scr-input" rows="3" spellcheck="false" placeholder="e.g. Dolo 650, Combiflam, Warf 5, Pan 40"></textarea>
+            <div class="screen-form__actions">
+              <button class="tbtn tbtn--primary" id="scr-run" type="button">Screen Interactions</button>
+              <span class="panel__meta" id="scr-context"></span>
+            </div>
+          </div>
+        </section>
+        <div id="scr-results"></div>
+      </div>
+
+      <!-- ================= KNOWLEDGE BASE ================= -->
+      <div class="view" id="view-formulary" hidden>
+        <section class="panel">
+          <header class="panel__head">
+            <h2>Clinical Knowledge Base — High-Risk Agents</h2>
+            <span class="panel__meta" id="kb-integrity"></span>
+          </header>
+          <div class="panel__tools">
+            <label for="kb-search">Filter</label>
+            <input id="kb-search" type="search" placeholder="Drug, class or risk">
+            <span class="panel__meta" id="kb-version"></span>
+          </div>
+          <div class="grid-wrap">
+            <table class="grid">
+              <thead>
+                <tr>
+                  <th>Medication</th>
+                  <th>Class</th>
+                  <th>Route</th>
+                  <th class="r">Adult max (mg/day)</th>
+                  <th class="r">Pediatric max (mg/kg/day)</th>
+                  <th>Min. age</th>
+                  <th>Severe contraindications</th>
+                  <th>Risk profile</th>
+                </tr>
+              </thead>
+              <tbody id="kb-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="kb-lower">
+          <section class="panel">
+            <header class="panel__head"><h2>Contraindication Matrix</h2><span class="panel__meta">Select a cell to view the monograph</span></header>
+            <div class="grid-wrap"><table class="matrix" id="matrix"></table></div>
+            <div class="legend"><span><i class="lg lg--c"></i>C — Contraindicated</span><span><i class="lg lg--m"></i>M — Major</span></div>
+          </section>
+          <section class="panel">
+            <header class="panel__head"><h2>Interaction Monograph</h2></header>
+            <div class="panel__body" id="monograph"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ================= AUDIT ================= -->
+      <div class="view" id="view-audit" hidden>
+        <section class="panel">
+          <header class="panel__head"><h2>Audit Trail — Current Session</h2><span class="panel__meta">Verifications, overrides and signatures</span></header>
+          <div class="grid-wrap">
+            <table class="grid">
+              <thead><tr><th>Time</th><th>Reference</th><th>Patient</th><th>Orders</th><th>Event</th><th>Detail</th></tr></thead>
+              <tbody id="audit-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Status bar -->
+  <footer class="statusbar">
+    <span class="statusbar__msg" id="sb-msg"><i class="dot"></i><span>Ready</span></span>
+    <span class="statusbar__alert" id="sb-alert" hidden></span>
+    <span class="statusbar__item" id="sb-kb">—</span>
+    <span class="statusbar__item statusbar__ai" id="sb-ai"><i class="dot"></i><span>AI model: —</span></span>
+    <span class="statusbar__item statusbar__disclaimer">Demonstration data — not for clinical use</span>
+  </footer>
+</div>
+
+<!-- Interrupting order-check dialog -->
+<div class="modal-backdrop" id="modal" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc">
+    <div class="modal__title">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 1 14h14L8 1.5Z" fill="#fff"/><path d="M8 6v3.6" stroke="#b3121b" stroke-width="1.6"/><circle cx="8" cy="11.6" r=".9" fill="#b3121b"/></svg>
+      <span id="modal-title">Critical Order Check</span>
+      <span class="modal__ref num" id="modal-ref"></span>
+    </div>
+    <div class="modal__body">
+      <p id="modal-desc"></p>
+      <table class="grid grid--modal"><thead><tr><th>Severity</th><th>Order check</th><th>Line</th></tr></thead><tbody id="modal-rows"></tbody></table>
+    </div>
+    <div class="modal__foot">
+      <button class="tbtn" id="modal-modify" type="button">Modify Order</button>
+      <button class="tbtn tbtn--primary" id="modal-review" type="button">Review Order Checks</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="js/formulary.js"></script>
+<script src="js/clinical-math.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/rationale.js"></script>
+<script src="js/screen.js"></script>
+<script src="js/ai-client.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
