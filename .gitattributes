@@ -1,0 +1,5 @@
+# Normalise line endings in the repository; pin the ones that break if converted.
+* text=auto
+*.sh text eol=lf
+*.bat text eol=crlf
+*.png binary
